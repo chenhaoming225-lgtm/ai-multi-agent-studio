@@ -6,9 +6,15 @@ AI Multi-Agent Studio —— crewAI 层级公司模式示例
 所有 LLM 调用统一走 LiteLLM 网关 (http://localhost:8010)，成本看板见网关 /spend/logs
 """
 import os
+
+# Windows 坑：httpx 默认 trust_env=True，会读注册表系统代理（Clash），
+# 把 localhost 请求也塞给代理导致 502。必须让 127.0.0.1 直连：
+os.environ["NO_PROXY"] = "127.0.0.1,localhost"
+os.environ["no_proxy"] = "127.0.0.1,localhost"
+
 from crewai import Agent, Task, Crew, Process, LLM
 
-GATEWAY = os.environ.get("LITELLM_URL", "http://localhost:8000")
+GATEWAY = os.environ.get("LITELLM_URL", "http://127.0.0.1:8010")
 
 # 在 LiteLLM config.yaml 里注册的模型名（代理层名字）
 fast_model  = "opencode-go/deepseek-v4-flash"   # 便宜：研发/文档
@@ -16,7 +22,9 @@ big_model   = "opencode-go/deepseek-v4-pro"     # 总指挥/复杂推理
 vision_model = "xiaomi/mimo-v2.6-pro"           # 看图（按 token，仅必需时）
 
 def llm(model: str) -> LLM:
-    return LLM(model=model, base_url=GATEWAY, api_key="sk-local")
+    # openai/ 前缀 = 告诉 litellm 走 OpenAI 兼容协议；
+    # base_url 指向本地网关，网关按 model_name 原样路由到 opencode-go/xiaomi
+    return LLM(model="openai/" + model, base_url=GATEWAY + "/v1", api_key="sk-local")
 
 def main(task: str):
     ceo = Agent(
@@ -55,7 +63,7 @@ def main(task: str):
     summary_task = Task(description="汇总全部成果为最终交付", expected_output="给老板的交付报告", agent=ceo)
 
     crew = Crew(
-        agents=[ceo, dev, qa, doc],
+        agents=[dev, qa, doc],
         tasks=[plan_task, dev_task, qa_task, doc_task, summary_task],
         process=Process.hierarchical,   # 层级：CEO 管理员工
         manager_agent=ceo,
