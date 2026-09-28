@@ -37,3 +37,6 @@ cd studio && .venv\Scripts\python run_company.py "做一个天气查询网页"
 1. 订阅优先：默认全部走 opencode-go，周额度内免费
 2. 小米仅在 vision/1M 上下文时启用（按 token 真花钱）
 3. LiteLLM 每次调用记录 token/成本，可查看板
+## 状态（2026-09-28 实测）
+
+✅ **全链路已验证**：LiteLLM 网关(8010) → opencode-go 订阅模型 → crewAI 公司模式（CEO 拆解→员工并行→汇总交付）端到端跑通。
