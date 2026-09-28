@@ -19,6 +19,15 @@ from urllib.parse import urlparse
 # Windows 坑：httpx 读系统代理致 502，必须直连 localhost
 os.environ["NO_PROXY"] = "127.0.0.1,localhost"
 os.environ["no_proxy"] = "127.0.0.1,localhost"
+# Windows 坑2：控制台默认 GBK，打印含 emoji/中文的交付报告会 UnicodeEncodeError 崩溃
+os.environ["PYTHONIOENCODING"] = "utf-8"
+os.environ["PYTHONUTF8"] = "1"
+import sys as _sys
+for _s in (_sys.stdout, _sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
 GATEWAY = os.environ.get("LITELLM_URL", "http://127.0.0.1:8010")
 
@@ -145,7 +154,11 @@ def on_crew_start(source, event):
 
 @crewai_event_bus.on(CrewKickoffCompletedEvent)
 def on_crew_done(source, event):
-    sse_broadcast("crew_done", {"output": (getattr(event, "output", "") or "")[:300], "tokens": getattr(event, "total_tokens", 0)})
+    out = getattr(event, "output", None)
+    # TaskOutput 对象（非 str）用 __str__/raw 转换
+    if not isinstance(out, str):
+        out = str(out) if out is not None else ""
+    sse_broadcast("crew_done", {"output": (out or "")[:300], "tokens": getattr(event, "total_tokens", 0)})
 
 @crewai_event_bus.on(CrewKickoffFailedEvent)
 def on_crew_fail(source, event):
