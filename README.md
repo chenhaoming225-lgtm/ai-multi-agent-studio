@@ -37,6 +37,23 @@ cd studio && .venv\Scripts\python run_company.py "做一个天气查询网页"
 1. 订阅优先：默认全部走 opencode-go，周额度内免费
 2. 小米仅在 vision/1M 上下文时启用（按 token 真花钱）
 3. LiteLLM 每次调用记录 token/成本，可查看板
+
+## 🖥 实时看板（Marvis 风格，2026-09-28 验证通过）
+
+运行任务时实时看到「公司」里每个员工在干嘛：CEO 拆解 → 员工开工/完成 → LLM 调用计数 → 成本。
+
+```bash
+# 1. 网关（先起）
+D:\Ai\litellm-gateway\.venv\Scripts\litellm.exe --config config.yaml --port 8010
+# 2. 带看板跑任务（自动开 8011 看板服务）
+cd D:\Ai\studio\live
+..\.venv\Scripts\python.exe run_company_live.py "做一个天气查询网页"
+# 3. 浏览器打开
+#    http://127.0.0.1:8011
+```
+
+原理：crewAI 自带 EventBus（crew_started/agent_started/llm_call 等事件）→ Python 内嵌 SSE 服务器 → 浏览器实时渲染办公室卡片 + 事件流 + 日志 + 统计（LLM 次数/Token）。
+
 ## 状态（2026-09-28 实测）
 
 ✅ **全链路已验证**：LiteLLM 网关(8010) → opencode-go 订阅模型 → crewAI 公司模式（CEO 拆解→员工并行→汇总交付）端到端跑通。
