@@ -3,231 +3,460 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI Multi-Agent Studio · 实时看板</title>
+<title>AI Office · Marvis 风格办公室</title>
 <style>
+  :root {
+    --bg: #EDEFF4; --sidebar: #FBFBFB; --card: #FFFFFF;
+    --text: #1A1A1A; --muted: #8A8F98; --icon: #B0B4BA;
+    --blue: #2E7CF6; --blue-soft: #BDE3FF; --selected: #F1F1F1;
+    --edge: #E6E8EC;
+    --shadow: 0 18px 50px rgba(30,40,80,.14), 0 2px 8px rgba(30,40,80,.06);
+  }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; background: #0f1420; color: #e8ecf4; overflow: hidden; height: 100vh; }
-  #app { display: grid; grid-template-columns: 1fr 380px; grid-template-rows: 56px 1fr 220px; height: 100vh; }
-  /* 顶栏 */
-  header { grid-column: 1 / 3; display: flex; align-items: center; gap: 16px; padding: 0 20px; background: #161d2e; border-bottom: 1px solid #232c42; }
-  header h1 { font-size: 17px; font-weight: 600; letter-spacing: .5px; }
-  header h1 .dot { color: #4ade80; }
-  #status { margin-left: auto; font-size: 13px; color: #93a1c0; }
-  #status .live { color: #4ade80; }
-  #status .idle { color: #f59e0b; }
-  /* 左侧：办公室 */
-  #office { position: relative; background: #131a29; overflow: hidden; }
-  #office .room-label { position: absolute; font-size: 12px; color: #6b7ba1; letter-spacing: 2px; font-weight: 600; }
-  #office .desk { position: absolute; background: rgba(255,255,255,.04); border: 1px solid #2a3452; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; transition: box-shadow .3s, border-color .3s; }
-  #office .desk.active { border-color: #4ade80; box-shadow: 0 0 22px rgba(74,222,128,.25); }
-  #office .desk.err { border-color: #f87171; box-shadow: 0 0 22px rgba(248,113,113,.25); }
-  #office .desk .person { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; background: #1f2937; border: 2px solid #374151; transition: transform .4s; }
-  #office .desk.active .person { transform: scale(1.08); border-color: #4ade80; }
-  #office .desk .name { font-size: 12px; color: #dbe2f0; font-weight: 600; }
-  #office .desk .model { font-size: 10px; color: #6b7ba1; max-width: 170px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #office .desk .task { font-size: 10px; color: #4ade80; max-width: 170px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #office .desk .state { font-size: 11px; color: #f59e0b; }
-  #office .bubble { position: absolute; background: #1e293b; border: 1px solid #334155; color: #dbe2f0; font-size: 11px; padding: 6px 10px; border-radius: 8px; max-width: 260px; box-shadow: 0 6px 20px rgba(0,0,0,.4); z-index: 10; animation: fadein .2s; }
-  #office .bubble::after { content: ""; position: absolute; top: 100%; left: 20px; border: 5px solid transparent; border-top-color: #1e293b; }
-  @keyframes fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-  .pulse { animation: pulse 1s infinite; }
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
-  /* 右侧：事件流 */
-  #events { grid-row: 1 / 3; grid-column: 2; background: #101828; border-left: 1px solid #232c42; display: flex; flex-direction: column; overflow: hidden; }
-  #events h2 { font-size: 13px; padding: 12px 16px; border-bottom: 1px solid #1e2740; color: #93a1c0; font-weight: 600; }
-  #eventList { flex: 1; overflow-y: auto; padding: 10px 12px; }
-  .ev { padding: 7px 10px; margin: 4px 0; border-radius: 7px; font-size: 12px; line-height: 1.5; background: #141c2e; border-left: 3px solid #334155; animation: slidein .25s; }
+  body { font-family: "PingFang SC","Microsoft YaHei","Inter",sans-serif; background: linear-gradient(135deg,#3a2a6e 0%,#5b2a8c 40%,#b04a8f 100%); height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  #app { width: 1500px; height: 900px; max-width: 96vw; max-height: 94vh; background: var(--card); border-radius: 14px; box-shadow: var(--shadow); display: flex; overflow: hidden; }
+  #sidebar { width: 208px; min-width: 208px; background: var(--sidebar); border-right: 1px solid var(--edge); display: flex; flex-direction: column; padding: 18px 12px 12px; }
+  #logo { font-size: 26px; font-weight: 800; letter-spacing: -.5px; color: var(--text); padding: 4px 8px 14px; }
+  #logo span { color: var(--blue); }
+  #search { display: flex; align-items: center; gap: 8px; background: #FFF; border: 1px solid var(--edge); border-radius: 10px; padding: 7px 10px; margin: 0 4px 14px; color: var(--icon); font-size: 13px; }
+  nav { flex: 1; overflow-y: auto; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; margin: 2px 4px; border-radius: 10px; font-size: 14px; color: var(--text); cursor: pointer; transition: background .15s; }
+  .nav-item svg { width: 17px; height: 17px; stroke: #111; stroke-width: 1.9; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .nav-item:hover { background: #F7F7F8; }
+  .nav-item.active { background: var(--selected); font-weight: 600; }
+  .group-label { font-size: 11px; color: var(--muted); padding: 12px 12px 4px; letter-spacing: .5px; }
+  .session { display: flex; align-items: center; gap: 10px; padding: 8px 10px; margin: 2px 4px; border-radius: 10px; font-size: 13.5px; cursor: pointer; color: #3c3c3c; }
+  .session:hover { background: #F7F7F8; }
+  .session.active { background: var(--selected); font-weight: 600; color: var(--text); }
+  .session .ico { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+  #userbar { display: flex; align-items: center; gap: 9px; padding: 12px 6px 4px; border-top: 1px solid var(--edge); font-size: 13px; }
+  #userbar .avatar { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg,#2E7CF6,#7c5cff); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+  #userbar .bell { margin-left: auto; color: var(--icon); }
+  #main { flex: 1; background: var(--bg); display: flex; flex-direction: column; min-width: 0; }
+  #topbar { height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 18px; background: rgba(255,255,255,.65); backdrop-filter: blur(8px); border-bottom: 1px solid var(--edge); }
+  #topbar h2 { font-size: 17px; font-weight: 700; color: var(--text); }
+  #topbar .spacer { flex: 1; }
+  .stat { font-size: 12px; color: var(--muted); display: flex; gap: 5px; align-items: center; }
+  .stat b { color: var(--text); font-size: 13.5px; min-width: 18px; text-align: center; }
+  #liveDot { width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; display: inline-block; }
+  #liveDot.on { background: #22c55e; box-shadow: 0 0 8px rgba(34,197,94,.6); }
+  #officeWrap { flex: 1; display: flex; min-height: 0; }
+  #office { flex: 1; min-width: 0; position: relative; }
+  #office canvas { width: 100%; height: 100%; display: block; }
+  #events { width: 320px; min-width: 320px; background: var(--card); border-left: 1px solid var(--edge); display: flex; flex-direction: column; min-height: 0; }
+  #events h3 { font-size: 13px; color: var(--muted); padding: 14px 16px 8px; font-weight: 600; }
+  #eventList { flex: 1; overflow-y: auto; padding: 4px 12px; }
+  .ev { background: var(--bg); border-radius: 12px; padding: 8px 11px; margin: 5px 0; font-size: 12px; line-height: 1.5; color: #2b2b2b; animation: slidein .25s ease; border-left: 3px solid #d0d4dd; }
+  .ev .tag { display: inline-block; font-size: 10px; padding: 1px 7px; border-radius: 20px; margin-right: 6px; font-weight: 600; vertical-align: 1px; }
+  .ev.crew .tag { background: #BDE3FF; color: #1a5fd0; }
+  .ev.task .tag { background: #dbe9ff; color: #2E7CF6; }
+  .ev.agent .tag { background: #d1f4e1; color: #0a8a4e; }
+  .ev.llm .tag { background: #fdeec8; color: #b07a00; }
+  .ev.done .tag { background: #c8e8ff; color: #1a76c8; }
+  .ev.err .tag { background: #ffdadd; color: #c81e2e; }
+  .ev b { color: #111; } .ev .muted { color: var(--muted); }
   @keyframes slidein { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
-  .ev .tag { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 4px; margin-right: 6px; vertical-align: 1px; font-weight: 600; }
-  .ev.crew .tag { background: #4338ca; color: #c7d2fe; }
-  .ev.task .tag { background: #0369a1; color: #bae6fd; }
-  .ev.agent .tag { background: #065f46; color: #a7f3d0; }
-  .ev.llm .tag { background: #7c2d12; color: #fed7aa; }
-  .ev.done .tag { background: #166534; color: #bbf7d0; }
-  .ev.err .tag { background: #991b1b; color: #fecaca; }
-  .ev b { color: #f0f4ff; }
-  .ev .muted { color: #6b7ba1; }
-  /* 底部：日志 */
-  #log { grid-column: 1 / 3; grid-row: 3; display: flex; flex-direction: column; background: #0c1220; border-top: 1px solid #1e2740; }
-  #log h2 { font-size: 13px; padding: 8px 16px; color: #93a1c0; }
-  #logBody { flex: 1; overflow-y: auto; padding: 6px 14px; font-family: Consolas, monospace; font-size: 11px; color: #7f8db0; }
-  #logBody .ln { padding: 1px 0; white-space: pre-wrap; word-break: break-all; }
-  #logBody .ln.llm { color: #fbbf24; }
-  #logBody .ln.agent { color: #4ade80; }
-  #logBody .ln.err { color: #f87171; }
-  /* 状态与成本 */
-  #stats { display: flex; gap: 18px; font-size: 12px; color: #93a1c0; }
-  #stats b { color: #e8ecf4; font-size: 14px; }
+  #footbar { height: 34px; display: flex; align-items: center; gap: 20px; padding: 0 18px; background: rgba(255,255,255,.65); border-top: 1px solid var(--edge); font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; }
 </style>
 </head>
 <body>
 <div id="app">
-  <header>
-    <h1><span class="dot">⬤</span> AI Multi-Agent Studio · 实时看板</h1>
-    <div id="stats">
-      <span>活跃员工 <b id="stWork">0</b></span>
-      <span>完成任务 <b id="stDone">0</b></span>
-      <span>LLM 调用 <b id="stLLM">0</b></span>
-      <span>Token <b id="stTokens">0</b></span>
+  <aside id="sidebar">
+    <div id="logo">AI<span>Office</span></div>
+    <div id="search"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg><input placeholder="搜索"></div>
+    <nav>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>新建对话</div>
+      <div class="nav-item active"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/></svg>自动任务</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>技能广场</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>管家团队</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>本地资料</div>
+      <div class="group-label">对话</div>
+      <div class="session active"><span class="ico" style="background:#22c55e;color:#fff;">◐</span>办公室</div>
+      <div class="session"><span class="ico" style="background:#e5e7eb;">◔</span>每日个股行情分析</div>
+    </nav>
+    <div id="userbar"><div class="avatar">👤</div><span>AI Office</span><span class="bell">🔔</span></div>
+  </aside>
+  <div id="main">
+    <div id="topbar">
+      <h2>◐ 办公室</h2>
+      <div class="spacer"></div>
+      <div class="stat">出勤 <b id="stWork">0</b></div>
+      <div class="stat">完成 <b id="stDone">0</b></div>
+      <div class="stat">LLM <b id="stLLM">0</b></div>
+      <div class="stat">Token <b id="stTokens">0</b></div>
+      <div class="stat">状态 <span id="liveDot"></span></div>
     </div>
-    <div id="status">连接中… <span class="idle pulse">●</span></div>
-  </header>
-
-  <div id="office">
-    <!-- 布局：左上 CEO 办公室，中部研发/测试/文档工位 -->
-    <div class="room-label" style="top:14px; left:20px;">👑 CEO 办公室</div>
-    <div class="room-label" style="top:14px; left:52%;">💻 研发工位</div>
-    <div class="room-label" style="top:14px; left:78%;">🧪 测试工位</div>
-    <div class="room-label" style="bottom:14px; left:52%;">📄 文档工位</div>
-    <!-- 员工卡片由 JS 动态插入 -->
-  </div>
-
-  <div id="events">
-    <h2>📡 实时事件流</h2>
-    <div id="eventList"></div>
-  </div>
-
-  <div id="log">
-    <h2>📜 运行日志</h2>
-    <div id="logBody"></div>
+    <div id="officeWrap">
+      <div id="office"><canvas id="canvas"></canvas></div>
+      <div id="events">
+        <h3>📡 行为事件流 (behavior_events)</h3>
+        <div id="eventList"></div>
+      </div>
+    </div>
+    <div id="footbar"><span id="footText">今日出勤 6 人 · 等待任务…</span></div>
   </div>
 </div>
-
 <script>
-const DESKS = {
-  "ceo": { label: "👑 CEO", pos: { left: "6%", top: "8%" }, size: "16%", h: "26%" },
-  "dev": { label: "💻 研发", pos: { left: "50%", top: "5%" }, size: "20%", h: "26%" },
-  "qa":  { label: "🧪 测试", pos: { left: "75%", top: "5%" }, size: "20%", h: "26%" },
-  "doc": { label: "📄 文档", pos: { left: "50%", top: "62%" }, size: "20%", h: "26%" },
+const cv = document.getElementById("canvas");
+const ctx = cv.getContext("2d");
+let CW = 900, CH = 620;
+
+/* ============ 员工（Marvis 逆向：每个 Agent 是一个员工） ============ */
+const STAFF = [
+  { key: "ceo",  name: "总指挥",        sub: "Marvis · main",        color: "#2E7CF6", room: "ceo",  rx: 0.5,  ry: 0.62 },
+  { key: "dev",  name: "研发工程师",    sub: "Dev Agent",            color: "#10b981", room: "dev",  rx: 0.5,  ry: 0.62 },
+  { key: "qa",   name: "测试工程师",    sub: "QA Agent",             color: "#f59e0b", room: "qa",   rx: 0.5,  ry: 0.62 },
+  { key: "doc",  name: "文档专员",      sub: "Doc Agent",            color: "#8b5cf6", room: "doc",  rx: 0.5,  ry: 0.62 },
+  { key: "comp", name: "Computer Agent", sub: "workbench/computer", color: "#0ea5e9", room: "wb",   rx: 0.3,  ry: 0.62 },
+  { key: "file", name: "File Agent",     sub: "workbench/file",     color: "#ec4899", room: "wb",   rx: 0.7,  ry: 0.62 },
+];
+const ROOM_ORDER = ["ceo", "dev", "qa", "doc", "wb", "mtg"];
+const ROOM_META = {
+  ceo: { label: "总指挥办公室", color: "#2E7CF6", soft: "#BDE3FF" },
+  dev: { label: "研发部",       color: "#10b981", soft: "#c9f2df" },
+  qa:  { label: "测试部",       color: "#f59e0b", soft: "#fdeec8" },
+  doc: { label: "文档部",       color: "#8b5cf6", soft: "#e4d9ff" },
+  wb:  { label: "工具间",       color: "#0ea5e9", soft: "#d0ecfb" },
+  mtg: { label: "会议室",       color: "#b08a2e", soft: "#fdf3d8" },
 };
-const roleToDesk = (role) => {
-  const s = role || "";
-  if (s.includes("CEO") || s.includes("总指挥") || s.includes("manager") || s.toLowerCase().includes("ceo")) return "ceo";
-  if (s.includes("研发") || s.includes("开发") || s.includes("工程师") && !s.includes("测试")) return "dev";
-  if (s.includes("测试") || s.includes("QA") || s.toLowerCase().includes("qa")) return "qa";
-  if (s.includes("文档") || s.includes("文秘") || s.includes("doc")) return "doc";
-  return "dev";
-};
-const office = document.getElementById("office");
-const persons = {}; // role -> {deskEl, taskEl, agentRole}
-Object.entries(DESKS).forEach(([key, cfg]) => {
-  const el = document.createElement("div");
-  el.className = "desk";
-  el.style.left = cfg.pos.left; el.style.top = cfg.pos.top;
-  el.style.width = cfg.size; el.style.height = cfg.h;
-  el.innerHTML = `<div class="person">${cfg.label.split(" ")[1] === "CEO" ? "👑" : cfg.label.split(" ")[1] === "研发" ? "🧑💻" : cfg.label.split(" ")[1] === "测试" ? "🔍" : "📝"}</div>
-    <div class="name">${cfg.label.split(" ")[1] || cfg.label}</div>
-    <div class="model muted">待命</div>
-    <div class="task"></div>
-    <div class="state"></div>`;
-  office.appendChild(el);
-  persons[key] = el;
-});
-function setDesk(key, model, task, state, active) {
-  const el = persons[key]; if (!el) return;
-  const modelEl = el.querySelector(".model"), taskEl = el.querySelector(".task"), stateEl = el.querySelector(".state");
-  if (model) modelEl.textContent = model;
-  if (task !== undefined) taskEl.textContent = task;
-  if (state) stateEl.textContent = state;
-  el.classList.toggle("active", !!active);
-  el.classList.remove("err");
+const ROOMS = {};
+let BOARD = { x: 24, y: 24, w: 100, h: 100 };
+
+/* 相对布局：按 canvas 尺寸动态算房间（3 列 × 2 行 + 任务板） */
+function layout() {
+  const pad = 22, gap = 18;
+  const boardH = Math.max(92, Math.min(130, CH * 0.17));
+  const colW = (CW - pad * 2 - gap * 2) / 3;
+  const rowH = (CH - pad * 2 - gap - boardH) / 2;
+  ROOM_ORDER.forEach((k, i) => {
+    const col = i % 3, row = Math.floor(i / 3);
+    ROOMS[k] = { ...ROOM_META[k], x: pad + col * (colW + gap), y: pad + row * (rowH + gap), w: colW, h: rowH };
+  });
+  BOARD = { x: pad, y: pad + 2 * (rowH + gap), w: CW - pad * 2, h: boardH };
+  // 员工位置 = 房间内相对坐标
+  for (const s of STAFF) {
+    const r = ROOMS[s.room];
+    const w = workers[s.key];
+    if (!w) continue;
+    if (!w.moving) {
+      w.x = w.tx = r.x + r.w * s.rx;
+      w.y = w.ty = r.y + r.h * s.ry;
+    }
+  }
 }
-// 事件流
+
+/* ============ 状态机（Marvis office_behavior_events 语义） ============ */
+/* work.started → work | work.completed → done | work.aborted → err | slack.completed → report */
+const workers = {};
+function initStaff() {
+  for (const s of STAFF) {
+    workers[s.key] = {
+      ...s, x: 0, y: 0, tx: 0, ty: 0,
+      state: "idle", bubble: "", bubbleT: 0,
+      walkT: Math.random() * 1000, moving: false,
+    };
+  }
+}
+function roleToKey(role) {
+  const s = (role || "").toLowerCase();
+  if (/ceo|总指挥|manager/.test(s)) return "ceo";
+  if (/研发|开发|dev|工程师/.test(s)) return "dev";
+  if (/测试|qa|质检/.test(s)) return "qa";
+  if (/文档|doc|文秘/.test(s)) return "doc";
+  if (/computer|电脑|桌面/.test(s)) return "comp";
+  if (/file|文件/.test(s)) return "file";
+  return "dev";
+}
+
+let lastT = performance.now();
+let activeRoom = null;
+function loop(now) {
+  const dt = Math.min(32, now - lastT); lastT = now;
+  // 尺寸自检测：容器变化时重新布局
+  const _r = document.getElementById("office").getBoundingClientRect();
+  if (Math.abs(_r.width - CW) > 1 || Math.abs(_r.height - CH) > 1) resize();
+  for (const k in workers) {
+    const w = workers[k];
+    const dx = w.tx - w.x, dy = w.ty - w.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist > 2) {
+      const sp = 150 * dt / 1000;
+      w.x += (dx / dist) * Math.min(sp, dist);
+      w.y += (dy / dist) * Math.min(sp, dist);
+      w.moving = true;
+      if (w.state !== "report") w.state = "walk";
+      w.walkT += dt;
+    } else {
+      w.moving = false;
+      if (w.state === "walk") w.state = "idle";
+    }
+    if (w.state === "work") w.walkT += dt;
+    if (w.bubbleT > 0) w.bubbleT -= dt;
+  }
+  draw();
+  requestAnimationFrame(loop);
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, CW, CH);
+  const g = ctx.createLinearGradient(0, 0, 0, CH);
+  g.addColorStop(0, "#ffffff"); g.addColorStop(1, "#eef1f6");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, CW, CH);
+  for (const k of ROOM_ORDER) drawRoom(k, ROOMS[k], k === activeRoom);
+  drawTaskboard();
+  for (const k in workers) drawPerson(workers[k]);
+  for (const k in workers) {
+    const w = workers[k];
+    if (w.bubbleT > 0 && w.bubble) drawBubble(w);
+  }
+}
+
+function drawRoom(key, d, active) {
+  if (!d) return;
+  ctx.save();
+  ctx.fillStyle = d.soft; ctx.globalAlpha = .32;
+  roundRect(d.x, d.y, d.w, d.h, 16); ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = active ? d.color : "#e3e6eb";
+  ctx.lineWidth = active ? 2.5 : 1.5;
+  roundRect(d.x, d.y, d.w, d.h, 16); ctx.stroke();
+  ctx.fillStyle = d.color; ctx.font = "bold 14px 'PingFang SC','Microsoft YaHei'";
+  ctx.textAlign = "left"; ctx.textBaseline = "top";
+  ctx.fillText(d.label, d.x + 14, d.y + 12);
+  if (key === "mtg") {
+    ctx.fillStyle = "#fff7e0";
+    ctx.beginPath();
+    ctx.ellipse(d.x + d.w / 2, d.y + d.h * 0.62, d.w * 0.32, d.h * 0.22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#e3cf8e"; ctx.lineWidth = 1.5; ctx.stroke();
+  } else {
+    ctx.fillStyle = "#ffffff";
+    roundRect(d.x + 14, d.y + 40, d.w - 28, d.h * 0.28, 10); ctx.fill();
+    ctx.strokeStyle = "#eef0f4"; ctx.lineWidth = 1; ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawTaskboard() {
+  ctx.save();
+  ctx.fillStyle = "#eef2f8";
+  roundRect(BOARD.x, BOARD.y, BOARD.w, BOARD.h, 16); ctx.fill();
+  ctx.strokeStyle = "#dde4ee"; ctx.lineWidth = 1.5; roundRect(BOARD.x, BOARD.y, BOARD.w, BOARD.h, 16); ctx.stroke();
+  ctx.fillStyle = "#5b6b84"; ctx.font = "bold 14px 'PingFang SC','Microsoft YaHei'";
+  ctx.textAlign = "left"; ctx.textBaseline = "top";
+  ctx.fillText("📋 任务板", BOARD.x + 14, BOARD.y + 12);
+  ctx.font = "13px 'PingFang SC','Microsoft YaHei'"; ctx.fillStyle = "#4a5a75";
+  ctx.fillText(boardLines[0] || "等待任务下发……", BOARD.x + 14, BOARD.y + 40);
+  ctx.fillStyle = "#8a9ab5"; ctx.font = "12px 'PingFang SC','Microsoft YaHei'";
+  ctx.fillText(boardLines[1] || "今日出勤 6 人 · 工位就绪", BOARD.x + 14, BOARD.y + 66);
+  if (BOARD.h > 100) ctx.fillText(boardLines[2] || "事件驱动：work.started → 敲键盘 | slack.completed → 走动汇报 | work.completed → 交付", BOARD.x + 14, BOARD.y + 90);
+  ctx.restore();
+}
+let boardLines = [];
+
+function drawPerson(w) {
+  const px = w.x, py = w.y;
+  const bob = w.state === "work" ? Math.sin(w.walkT / 130) * 2 : 0;
+  const step = w.state === "walk" ? Math.sin(w.walkT / 110) * 6 : 0;
+  const armUp = w.state === "report";
+  ctx.save();
+  ctx.fillStyle = "rgba(30,40,80,.10)";
+  ctx.beginPath(); ctx.ellipse(px, py + 36, 18, 6, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "#374151"; ctx.lineWidth = 5; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(px - 8, py + 18); ctx.lineTo(px - 8 + step, py + 34); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(px + 8, py + 18); ctx.lineTo(px + 8 - step, py + 34); ctx.stroke();
+  ctx.fillStyle = w.color;
+  roundRect(px - 13, py - 4 + bob, 26, 26, 9); ctx.fill();
+  ctx.strokeStyle = w.color; ctx.lineWidth = 5;
+  if (armUp) {
+    ctx.beginPath(); ctx.moveTo(px + 12, py + 2 + bob); ctx.lineTo(px + 22, py - 16 + bob); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px - 12, py + 2 + bob); ctx.lineTo(px - 18, py + 16 + bob); ctx.stroke();
+  } else if (w.state === "work") {
+    const kb = Math.sin(w.walkT / 90) * 3;
+    ctx.beginPath(); ctx.moveTo(px - 12, py + 2 + bob); ctx.lineTo(px - 22, py + 14 + bob + kb); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px + 12, py + 2 + bob); ctx.lineTo(px + 22, py + 14 + bob - kb); ctx.stroke();
+  } else {
+    ctx.beginPath(); ctx.moveTo(px - 12, py + 2 + bob); ctx.lineTo(px - 19, py + 16 + bob); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px + 12, py + 2 + bob); ctx.lineTo(px + 19, py + 16 + bob); ctx.stroke();
+  }
+  ctx.fillStyle = "#f6c9a8";
+  ctx.beginPath(); ctx.arc(px, py - 16 + bob, 13, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#4b5563";
+  ctx.beginPath(); ctx.arc(px, py - 19 + bob, 13, Math.PI, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#222";
+  const blink = (Math.sin(w.walkT / 700) > 0.97) ? 0.3 : 1;
+  ctx.beginPath(); ctx.ellipse(px - 5, py - 15 + bob, 1.8, 1.8 * blink, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(px + 5, py - 15 + bob, 1.8, 1.8 * blink, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "#b4715a"; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(px, py - 11 + bob, 4, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+  const badge = { idle: "●", work: "💻", walk: "🚶", report: "💬", done: "✅", err: "❌" }[w.state] || "●";
+  ctx.font = "13px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "top";
+  ctx.fillText(badge, px, py + 38);
+  ctx.font = "bold 11px 'PingFang SC','Microsoft YaHei'"; ctx.fillStyle = "#374151";
+  ctx.fillText(w.name, px, py + 52);
+  ctx.font = "9px Consolas,monospace"; ctx.fillStyle = "#9ca3af";
+  ctx.fillText(w.sub, px, py + 65);
+  ctx.restore();
+}
+
+function drawBubble(w) {
+  ctx.save();
+  ctx.font = "11px 'PingFang SC','Microsoft YaHei'";
+  const txt = w.bubble;
+  const tw = Math.min(250, ctx.measureText(txt).width + 22);
+  const bx = Math.max(8, Math.min(CW - tw - 8, w.x - tw / 2));
+  const by = w.y - 78;
+  ctx.fillStyle = "#ffffff"; ctx.strokeStyle = "#e3e6eb"; ctx.lineWidth = 1;
+  roundRect(bx, by, tw, 24, 9); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(w.x - 5, by + 24); ctx.lineTo(w.x, by + 30); ctx.lineTo(w.x + 5, by + 24); ctx.closePath();
+  ctx.fillStyle = "#fff"; ctx.fill();
+  ctx.fillStyle = "#333"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  ctx.fillText(txt, bx + 11, by + 13);
+  ctx.restore();
+}
+
+function resize() {
+  const wrap = document.getElementById("office");
+  const rect = wrap.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  CW = Math.max(300, rect.width); CH = Math.max(200, rect.height);
+  cv.width = CW * dpr; cv.height = CH * dpr;
+  // 不设 style 宽高，走 CSS 100% 自适应，避免撑大容器导致死锁
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  layout();
+}
+window.addEventListener("resize", resize);
+
+/* ============ 行为事件 ============ */
 const evList = document.getElementById("eventList");
 function addEvent(cls, tag, html) {
   const d = document.createElement("div");
   d.className = "ev " + cls;
-  d.innerHTML = `<span class="tag">${tag}</span>` + html;
+  d.innerHTML = '<span class="tag">' + tag + '</span>' + html;
   evList.prepend(d);
-  while (evList.children.length > 120) evList.lastChild.remove();
+  while (evList.children.length > 150) evList.lastChild.remove();
 }
-// 日志
-const logBody = document.getElementById("logBody");
-function addLog(cls, text) {
-  const d = document.createElement("div");
-  d.className = "ln " + cls;
-  d.textContent = text;
-  logBody.appendChild(d);
-  while (logBody.children.length > 400) logBody.firstChild.remove();
-  logBody.scrollTop = logBody.scrollHeight;
-}
-// 统计
+function foot(msg) { document.getElementById("footText").textContent = msg; }
 let statLLM = 0, statDone = 0, statTokens = 0;
 const $ = (id) => document.getElementById(id);
-function flashBubble(deskKey, text) {
-  const el = persons[deskKey]; if (!el) return;
-  const rect = el.getBoundingClientRect();
-  const officeRect = office.getBoundingClientRect();
-  const b = document.createElement("div");
-  b.className = "bubble";
-  b.textContent = text;
-  b.style.left = (rect.left - officeRect.left + 10) + "px";
-  b.style.top = (rect.top - officeRect.top - 34) + "px";
-  office.appendChild(b);
-  setTimeout(() => b.remove(), 2600);
+function setStat() {
+  $("stWork").textContent = Object.values(workers).filter((w) => w.state === "work" || w.state === "walk" || w.state === "report").length;
+  $("stDone").textContent = statDone;
+  $("stLLM").textContent = statLLM;
+  $("stTokens").textContent = statTokens;
 }
-// SSE
-const statusEl = document.getElementById("status");
-const es = new EventSource("/events");
-es.onopen = () => { statusEl.innerHTML = "实时连接 <span class='live'>●</span>"; };
-es.onerror = () => { statusEl.innerHTML = "断开 <span class='idle pulse'>●</span>"; };
-es.onmessage = (e) => {
-  try { const m = JSON.parse(e.data); handle(m); } catch {}
-};
+function bubble(key, text, ms) {
+  const w = workers[key]; if (!w) return;
+  w.bubble = text; w.bubbleT = ms || 2800;
+}
+function goToRoom(key, roomKey, rx, ry) {
+  const w = workers[key]; if (!w) return;
+  const r = ROOMS[roomKey]; if (!r) return;
+  w.tx = r.x + r.w * (rx ?? 0.5);
+  w.ty = r.y + r.h * (ry ?? 0.62);
+}
+
 function handle(m) {
   const d = m.data || {};
   switch (m.type) {
-    case "crew_start":
-      addEvent("crew", "公司", "任务启动：<b>" + (d.inputs?.task || "?") + "</b>");
-      addLog("", "[公司] 任务启动: " + (d.inputs?.task || ""));
+    case "crew_start": {
+      const task = (d.inputs && d.inputs.task) || "";
+      boardLines = ["▶ " + task.slice(0, 60), "总指挥拆解中……", "work.started 事件已广播"];
+      foot("任务启动：" + task);
+      addEvent("crew", "work.started", "任务启动：<b>" + task + "</b>");
+      workers.ceo.state = "work"; activeRoom = "ceo";
+      bubble("ceo", "正在拆解任务…", 3500);
+      setStat();
       break;
-    case "crew_done":
-      addEvent("done", "完成", "公司任务完成，<span class='muted'>token " + (d.tokens ?? 0) + "</span>");
-      addLog("", "[公司] 完成 ✅");
-      statusEl.innerHTML = "任务完成 <span class='live'>●</span>";
-      break;
-    case "crew_fail":
-      addEvent("err", "失败", d.error || "?");
-      addLog("err", "[公司] 失败: " + (d.error || ""));
-      break;
+    }
     case "task_start":
-      addEvent("task", "任务", "<b>" + (d.agent || "?") + "</b>：<span class='muted'>" + (d.description || "") + "</span>");
-      addLog("", "[任务] " + (d.description || ""));
+      addEvent("task", "task", "<span class='muted'>" + (d.description || "") + "</span>");
+      boardLines[1] = "当前任务：" + (d.description || "").slice(0, 50);
       break;
     case "agent_start": {
-      const key = roleToDesk(d.role);
-      setDesk(key, d.model, d.task, "工作中…", true);
-      const s = document.querySelector(`#office .desk ${persons[key] ? "" : ""}`);
-      addEvent("agent", "员工", "<b>" + (d.role || "?") + "</b> 开工 <span class='muted'>" + (d.model || "") + "</span>");
-      addLog("agent", "[" + (d.role || "?") + "] " + (d.task || ""));
-      flashBubble(key, (d.task || "").slice(0, 40));
-      $("stWork").textContent = Object.keys(persons).filter(k => persons[k].classList.contains("active")).length;
+      const key = roleToKey(d.role);
+      const w = workers[key]; if (!w) break;
+      goToRoom(key, w.room, key === "file" ? 0.7 : key === "comp" ? 0.3 : 0.5);
+      w.state = "work";
+      bubble(key, (d.task || "").slice(0, 28), 3200);
+      activeRoom = w.room;
+      addEvent("agent", "work.started", "<b>" + (d.role || key) + "</b> 开工 <span class='muted'>" + (d.model || "") + "</span>");
+      setStat();
       break;
     }
     case "agent_done": {
-      const key = roleToDesk(d.role);
-      setDesk(key, null, "", "✅ 完成", false);
+      const key = roleToKey(d.role);
+      const w = workers[key]; if (!w) break;
+      w.state = "done";
+      bubble(key, "✅ " + (d.output || "").slice(0, 22), 3000);
       statDone++;
-      $("stDone").textContent = statDone;
-      addEvent("done", "交付", "<b>" + (d.role || "?") + "</b> 完成：<span class='muted'>" + (d.output || "").slice(0, 80) + "</span>");
-      addLog("agent", "[" + (d.role || "?") + "] ✅ " + (d.output || "").slice(0, 120));
+      addEvent("done", "work.completed", "<b>" + (d.role || key) + "</b>：<span class='muted'>" + (d.output || "").slice(0, 80) + "</span>");
+      setTimeout(() => {
+        if (!workers[key]) return;
+        goToRoom(key, "mtg", 0.35 + Math.random() * 0.3, 0.55);
+        workers[key].state = "report";
+        bubble(key, "💬 去会议室汇报", 2200);
+        addEvent("agent", "slack.completed", "<b>" + (d.role || key) + "</b> 前往会议室汇报");
+        setTimeout(() => {
+          goToRoom(key, workers[key].room, key === "file" ? 0.7 : key === "comp" ? 0.3 : 0.5);
+          workers[key].state = "idle";
+        }, 2600);
+      }, 900);
+      setStat();
       break;
     }
     case "agent_err": {
-      const key = roleToDesk(d.role);
-      if (persons[key]) { persons[key].classList.add("err"); setDesk(key, null, "", "❌ 出错", false); }
-      addEvent("err", "出错", "<b>" + (d.role || "?") + "</b>：" + (d.error || ""));
-      addLog("err", "[" + (d.role || "?") + "] ❌ " + (d.error || ""));
+      const key = roleToKey(d.role);
+      const w = workers[key]; if (!w) break;
+      w.state = "err";
+      bubble(key, "❌ " + (d.error || "").slice(0, 22), 3000);
+      addEvent("err", "work.aborted", "<b>" + (d.role || key) + "</b>：" + (d.error || ""));
+      setTimeout(() => { if (workers[key]) workers[key].state = "idle"; }, 3200);
+      setStat();
       break;
     }
     case "llm_start":
       statLLM++;
-      $("stLLM").textContent = statLLM;
-      addEvent("llm", "LLM", "<b>" + (d.model || "?") + "</b> <span class='muted'>调用 #" + statLLM + "</span>");
-      addLog("llm", "[LLM] " + (d.model || "?") + ": " + (d.prompt || "").slice(0, 90));
+      addEvent("llm", "llm_call", "<b>" + (d.model || "?") + "</b> <span class='muted'>#" + statLLM + "</span>");
+      setStat();
+      break;
+    case "crew_done":
+      statTokens = d.tokens ?? 0;
+      addEvent("done", "run.completed", "公司任务完成 <span class='muted'>token " + statTokens + "</span>");
+      boardLines = ["✅ 交付完成", "本次累计 LLM 调用 " + statLLM + " 次", "office_behavior_events 已归档"];
+      for (const k in workers) workers[k].state = "idle";
+      workers.ceo.state = "report";
+      bubble("ceo", "🎉 最终交付完成", 5000);
+      foot("✅ 任务完成");
+      document.getElementById("liveDot").className = "on";
+      setStat();
+      break;
+    case "crew_fail":
+      addEvent("err", "run.failed", d.error || "?");
+      foot("❌ 失败：" + (d.error || ""));
       break;
   }
 }
+
+const liveDot = document.getElementById("liveDot");
+const es = new EventSource("/events");
+es.onopen = () => { liveDot.className = "on"; foot("实时连接 · 今日出勤 6 人"); };
+es.onerror = () => { liveDot.className = ""; foot("连接断开，等待重连…"); };
+es.onmessage = (e) => { try { handle(JSON.parse(e.data)); } catch (_) {} };
+
+initStaff();
+resize();
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
