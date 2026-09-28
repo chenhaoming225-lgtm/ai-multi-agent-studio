@@ -1,0 +1,2 @@
+crewai
+# LiteLLM 网关单独装（gateway/ 下），本目录只需 crewai
