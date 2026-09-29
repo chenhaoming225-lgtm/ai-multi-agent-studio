@@ -164,8 +164,44 @@ function initStaff() {
       ...s, x: 0, y: 0, tx: 0, ty: 0,
       state: "idle", bubble: "", bubbleT: 0,
       walkT: Math.random() * 1000, moving: false,
+      checkedIn: false,
     };
   }
+}
+
+/* ============ 每日出勤（Marvis office_daily_presence 机制） ============ */
+function todayKey() {
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+function checkInAll() {
+  // 打卡记录（localStorage 持久化，跨刷新保留）
+  const key = "presence_" + todayKey();
+  try { localStorage.setItem(key, String(STAFF.length)); } catch (_) {}
+  // 小人从大门依次入场：门 → 自己工位
+  const gate = { x: 36, y: CH - 60 };
+  const order = ["ceo", "dev", "qa", "doc", "comp", "file"];
+  order.forEach((k, i) => {
+    const w = workers[k];
+    if (!w) return;
+    w.x = gate.x + (i % 3) * 22;
+    w.y = gate.y + Math.floor(i / 3) * 18;
+    const home = STAFF.find((s) => s.key === k);
+    const room = ROOMS[home.room];
+    w.tx = room.x + room.w * home.rx;
+    w.ty = room.y + room.h * home.ry;
+    w.state = "walk";
+    setTimeout(() => {
+      if (!workers[k]) return;
+      workers[k].checkedIn = true;
+      bubble(k, "✅ 上班打卡", 2200);
+      addEvent("agent", "presence.checkin", "<b>" + workers[k].name + "</b> 上班打卡 <span class='muted'>" + todayKey() + "</span>");
+      setStat();
+    }, 1200 + i * 550);
+  });
+  foot("今日出勤 " + STAFF.length + " 人 · 陆续打卡中…");
+  boardLines = ["🕘 上班打卡 · " + todayKey(), "今日出勤 " + STAFF.length + " 人 · 陆续就位", "presence 记录已保存（office_daily_presence）"];
+  addEvent("crew", "presence", "全员上班打卡 <span class='muted'>" + todayKey() + "</span>");
 }
 function roleToKey(role) {
   const s = (role || "").toLowerCase();
@@ -222,6 +258,7 @@ function draw() {
   const g = ctx.createLinearGradient(0, 0, 0, CH);
   g.addColorStop(0, "#ffffff"); g.addColorStop(1, "#eef1f6");
   ctx.fillStyle = g; ctx.fillRect(0, 0, CW, CH);
+  drawGate();
   for (const k of ROOM_ORDER) drawRoom(k, ROOMS[k], k === activeRoom);
   drawTaskboard();
   for (const k in workers) drawPerson(workers[k]);
@@ -254,6 +291,22 @@ function drawRoom(key, d, active) {
     roundRect(d.x + 14, d.y + 40, d.w - 28, d.h * 0.28, 10); ctx.fill();
     ctx.strokeStyle = "#eef0f4"; ctx.lineWidth = 1; ctx.stroke();
   }
+  ctx.restore();
+}
+
+function drawGate() {
+  ctx.save();
+  const gx = 18, gy = CH - 130;
+  ctx.fillStyle = "#e8edf5";
+  roundRect(gx, gy, 92, 112, 10); ctx.fill();
+  ctx.strokeStyle = "#c9d4e4"; ctx.lineWidth = 2; ctx.stroke();
+  // 门洞
+  ctx.fillStyle = "#fff";
+  roundRect(gx + 18, gy + 30, 56, 74, 6); ctx.fill();
+  ctx.strokeStyle = "#c9d4e4"; ctx.stroke();
+  ctx.fillStyle = "#5b6b84"; ctx.font = "bold 12px 'PingFang SC','Microsoft YaHei'";
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  ctx.fillText("🚪 公司大门", gx + 46, gy + 8);
   ctx.restore();
 }
 
@@ -554,6 +607,8 @@ document.getElementById("sess-office").addEventListener("click", () => switchVie
 initStaff();
 resize();
 requestAnimationFrame(loop);
+// 页面加载 → 播放上班打卡（每日一次，刷新则重放演示）
+setTimeout(checkInAll, 900);
 </script>
 </body>
 </html>
