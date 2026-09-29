@@ -1,0 +1,61 @@
+/* DSH 办公室 样式 */
+#dshOfficeBtn{
+  position:fixed; z-index:99991; display:inline-flex; align-items:center; gap:5px;
+  width:auto; height:auto; max-height:34px; box-sizing:border-box; margin:0; line-height:1;
+  padding:7px 11px; border-radius:8px; cursor:pointer;
+  background:linear-gradient(180deg,#1b2430,#141b24);
+  border:1px solid rgba(192,32,32,.45);
+  color:#e6edf3; font:600 12px/1 system-ui,"Segoe UI","Microsoft YaHei",sans-serif;
+  box-shadow:0 2px 10px rgba(0,0,0,.45);
+  transition:border-color .15s, transform .12s, background .15s;
+}
+#dshOfficeBtn:hover{ border-color:#c02020; background:linear-gradient(180deg,#232e3c,#182130); transform:translateY(-1px); }
+#dshOfficeBtn.dso-on{ border-color:#c02020; box-shadow:0 0 0 2px rgba(192,32,32,.25),0 2px 12px rgba(0,0,0,.5); }
+
+#dshOfficePanel{
+  position:fixed; z-index:99990; top:50%; left:50%;
+  width:min(1120px,94vw); height:min(720px,90vh);
+  transform:translate(-50%,-46%) scale(.97); opacity:0; pointer-events:none;
+  background:linear-gradient(180deg,#0e1319,#0a0e13);
+  border:1px solid rgba(192,32,32,.35); border-radius:14px;
+  box-shadow:0 24px 70px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.03) inset;
+  display:flex; flex-direction:column; overflow:hidden;
+  font-family:system-ui,"Segoe UI","Microsoft YaHei",sans-serif;
+  transition:opacity .18s ease, transform .18s ease;
+}
+#dshOfficePanel.dso-open{ opacity:1; pointer-events:auto; transform:translate(-50%,-50%) scale(1); }
+
+.dso-head{
+  display:flex; align-items:center; gap:10px; padding:11px 14px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  background:linear-gradient(180deg,rgba(192,32,32,.10),transparent);
+}
+.dso-title{ color:#f0f6fc; font-weight:700; font-size:14px; letter-spacing:.3px; }
+.dso-sub{ color:#8b949e; font-size:12px; }
+.dso-spacer{ flex:1; }
+.dso-x{
+  width:26px; height:26px; border-radius:6px; cursor:pointer;
+  background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.09); color:#c9d1d9; font-size:12px;
+}
+.dso-x:hover{ background:rgba(192,32,32,.25); border-color:#c02020; color:#fff; }
+
+.dso-body{ flex:1; display:flex; min-height:0; }
+.dso-canvas-wrap{ flex:1; min-width:0; padding:12px; display:flex; align-items:stretch; min-height:0; }
+#dsoCanvas{ display:block; border-radius:10px; border:1px solid rgba(255,255,255,.06); }
+
+.dso-side{ width:280px; flex:none; display:flex; flex-direction:column; gap:10px; padding:12px 12px 12px 0; min-height:0; }
+.dso-sec{ background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.06); border-radius:10px; padding:10px; }
+.dso-flex{ flex:1; display:flex; flex-direction:column; min-height:0; }
+.dso-sech{ color:#c9d1d9; font-size:12px; font-weight:600; margin-bottom:8px; }
+.dso-stats{ display:flex; flex-direction:column; gap:6px; }
+.dso-row{ display:flex; justify-content:space-between; font-size:12px; }
+.dso-k{ color:#8b949e; }
+.dso-v{ font-weight:700; font-variant-numeric:tabular-nums; }
+.dso-events{ flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:4px; min-height:0; }
+.dso-events::-webkit-scrollbar{ width:6px; }
+.dso-events::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.12); border-radius:3px; }
+.dso-ev{ display:flex; gap:6px; font-size:11px; line-height:1.45; }
+.dso-ev-t{ color:#6e7681; font-variant-numeric:tabular-nums; flex:none; }
+.dso-ev-i{ flex:none; width:10px; text-align:center; }
+.dso-ev-x{ color:#adbac7; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dso-empty{ color:#6e7681; font-size:11px; }
