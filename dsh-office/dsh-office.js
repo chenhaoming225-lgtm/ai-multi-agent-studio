@@ -5,6 +5,7 @@
 */
 (function(){
   'use strict';
+  window.__DSH_OFFICE_V = 'v11-floor-fused';
   if (window.__DSH_OFFICE__) return;
   window.__DSH_OFFICE__ = true;
 
@@ -215,6 +216,7 @@
   var CW=800, CH=500, dpr=Math.min(2, window.devicePixelRatio||1);
   var view = { sc:1, ox:0, oy:0 };
   var pendingLabels = [];
+  var pendingBadges = [];
 
   function buildPanel(){
     panelEl = document.createElement('div');
@@ -360,26 +362,36 @@
     ctx.translate(ox, oy);
     ctx.scale(sc, sc);
 
-    // 地板（用可走格子铺一层极淡色块，体现 Marvis 的房间分区）
-    var cells = walkableCells();
-    ctx.fillStyle = 'rgba(255,255,255,0.72)';
-    cells.forEach(function(c){ ctx.fillRect(c.cx*tw, c.cy*th, tw, th); });
-    ctx.strokeStyle = 'rgba(225,230,236,0.85)';
-    ctx.lineWidth = 1/sc;
-    cells.forEach(function(c){ ctx.strokeRect(c.cx*tw+0.5, c.cy*th+0.5, tw-1, th-1); });
+    // 房间底：整块浅色（先铺满，再用墙块雕出房间形状）
+    ctx.fillStyle = '#f1f4f7';
+    ctx.fillRect(0, 0, mapW, mapH);
 
-    // 阻挡墙（深一档，体现房间形状）
+    var cells = walkableCells();
+    // 可走区连通填充：向四周扩张半格，让相邻白区融合成完整房间
+    ctx.fillStyle = '#ffffff';
+    var growX = tw * 0.5, growY = th * 0.5;
+    cells.forEach(function(c){
+      ctx.fillRect(c.cx*tw - growX, c.cy*th - growY, tw + growX*2, th + growY*2);
+    });
+
+    // 墙块：圆角，弱化「迷宫感」
     var block = null;
     (R.map.layers||[]).forEach(function(l){ if (l.name==='block') block = l; });
     if (block){
-      ctx.fillStyle = '#eceff3';
+      ctx.fillStyle = '#f1f4f7';
       for (var i=0;i<block.data.length;i++){
         if (block.data[i] !== 0){
           var bx = (i % block.width)*tw, by = Math.floor(i/block.width)*th;
-          ctx.fillRect(bx, by, tw, th);
+          rr(bx + 1, by + 1, tw - 2, th - 2, 7);
+          ctx.fill();
         }
       }
     }
+
+    // 地板分格：极淡，只留质感
+    ctx.strokeStyle = 'rgba(238,242,246,0.75)';
+    ctx.lineWidth = 1 / sc;
+    cells.forEach(function(c){ ctx.strokeRect(c.cx*tw + 0.5, c.cy*th + 0.5, tw - 1, th - 1); });
 
     // 对象层（按 group 内层顺序）
     var objs = collectObjects();
@@ -399,13 +411,23 @@
 
     ctx.restore();
 
-    // 名牌（屏幕坐标）
+    // 名牌 + 序号徽章（屏幕坐标）
+    window.__dsoDebug = {
+      labels: pendingLabels.length,
+      badges: pendingBadges.length,
+      items: (state.items||[]).length,
+      running: (state.items||[]).filter(function(s){ return s.running; }).length,
+      allRunning: (state.all||[]).filter(function(s){ return s.running; }).length,
+      actives: (state.items||[]).map(function(s){ return !!s.running; })
+    };
     drawLabels();
+    drawBadges();
   }
 
   function drawAgents(){
     var list = state.items || [];
     pendingLabels = [];
+    pendingBadges = [];
     if (!list.length) return;
     var cells = walkableCells();
     if (!cells.length) return;
@@ -419,10 +441,32 @@
     var n = Math.min(list.length, 8);
     var picks = [];
     // 把整个可走区切成 n 段，每段取一个 —— 铺满全场且不重叠
-    var per = Math.max(1, Math.ceil(cells.length / n));
-    for (var k = 0; k < n && k * per < cells.length; k++){
-      var slice = cells.slice(k * per, (k + 1) * per);
-      if (slice.length) picks.push(slice[Math.floor(slice.length / 2)]);
+    // 包围盒均匀撒点，再落到最近可走格 —— 铺满整个房间而非一条对角线
+    if (cells.length){
+      var minx=1e9, maxx=-1e9, miny=1e9, maxy=-1e9;
+      cells.forEach(function(c){
+        if (c.cx<minx) minx=c.cx; if (c.cx>maxx) maxx=c.cx;
+        if (c.cy<miny) miny=c.cy; if (c.cy>maxy) maxy=c.cy;
+      });
+      var spanX = maxx - minx + 1, spanY = maxy - miny + 1;
+      var cols = Math.max(1, Math.round(Math.sqrt(n * spanX / spanY)));
+      var rows = Math.ceil(n / cols);
+      for (var r = 0; r < rows && picks.length < n; r++){
+        for (var c2 = 0; c2 < cols && picks.length < n; c2++){
+          var tx = minx + spanX * (c2 + 0.5) / cols;
+          var ty = miny + spanY * (r + 0.5) / rows;
+          var best = null, bd = 1e9;
+          for (var i2 = 0; i2 < cells.length; i2++){
+            var cc = cells[i2];
+            var d = (cc.cx - tx) * (cc.cx - tx) + (cc.cy - ty) * (cc.cy - ty);
+            if (d < bd){ bd = d; best = cc; }
+          }
+          if (best && picks.indexOf(best) < 0) picks.push(best);
+        }
+      }
+      for (var b2 = 0; picks.length < n && b2 < cells.length; b2++){
+        if (picks.indexOf(cells[b2]) < 0) picks.push(cells[b2]);
+      }
     }
 
     var tw = R.map.tilewidth, th = R.map.tileheight;
@@ -445,15 +489,23 @@
       var ss = f.spriteSourceSize;
       drawSprite(ctx, anim.img, f, dx + ss.x * scale, dy + ss.y * scale, f.frame.w * scale, f.frame.h * scale);
 
-      // 内容实际底部（地图坐标），名牌贴在这里
-      var contentBottom = dy + ss.y * scale + f.frame.h * scale;
-      pendingLabels.push({
-        x: view.ox + bx * view.sc,
-        y: view.oy + contentBottom * view.sc + 3,
-        title: labelOf(s, i),
-        sub: subOf(s),
-        active: active
-      });
+      // 名牌只给「工作中」—— 空闲用头顶小徽章，避免满屏名牌压住画面
+      if (active){
+        var contentBottom = dy + ss.y * scale + f.frame.h * scale;
+        pendingLabels.push({
+          x: view.ox + bx * view.sc,
+          y: view.oy + contentBottom * view.sc + 3,
+          title: labelOf(s, i),
+          sub: subOf(s),
+          active: true
+        });
+      } else {
+        pendingBadges.push({
+          x: view.ox + bx * view.sc,
+          y: view.oy + (dy + ss.y * scale) * view.sc - 7,
+          n: i + 1
+        });
+      }
     }
   }
 
@@ -488,6 +540,27 @@
       ctx.font = '10px -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';
       ctx.fillStyle = L.active ? '#00a06b' : '#9aa3ad';
       ctx.fillText(L.sub, L.x, y + 25);
+      ctx.restore();
+    });
+  }
+
+  function drawBadges(){
+    if (!pendingBadges.length) return;
+    pendingBadges.forEach(function(B){
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(B.x, B.y, 8.5, 0, 6.2832);
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(214,220,227,1)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle = '#8b949e';
+      ctx.font = '600 10px -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(B.n), B.x, B.y + 0.5);
+      ctx.textBaseline = 'alphabetic';
       ctx.restore();
     });
   }

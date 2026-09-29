@@ -12,11 +12,11 @@
     <link rel="stylesheet" crossorigin href="/assets/index-CSGf6Qzd.css">
     <link rel="stylesheet" href="/mascot.css">
     <link rel="stylesheet" href="/dsh-routes.css?v=5">
-    <link rel="stylesheet" href="/dsh-office.css?v=7">
+    <link rel="stylesheet" href="/dsh-office.css?v=9">
   </head>
   <body>
     <div id="root"></div>
     <script src="/dsh-routes.js?v=5" defer></script>
-    <script src="/dsh-office.js?v=7" defer></script>
+    <script src="/dsh-office.js?v=11" defer></script>
   </body>
 </html>
