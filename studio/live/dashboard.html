@@ -68,10 +68,10 @@
       <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>新建对话</div>
       <div class="nav-item active"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/></svg>自动任务</div>
       <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>技能广场</div>
-      <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>管家团队</div>
+      <div class="nav-item" id="nav-team"><svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>管家团队</div>
       <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>本地资料</div>
       <div class="group-label">对话</div>
-      <div class="session active"><span class="ico" style="background:#22c55e;color:#fff;">◐</span>办公室</div>
+      <div class="session active" id="sess-office"><span class="ico" style="background:#22c55e;color:#fff;">◐</span>办公室</div>
       <div class="session"><span class="ico" style="background:#e5e7eb;">◔</span>每日个股行情分析</div>
     </nav>
     <div id="userbar"><div class="avatar">👤</div><span>AI Office</span><span class="bell">🔔</span></div>
@@ -92,6 +92,11 @@
         <h3>📡 行为事件流 (behavior_events)</h3>
         <div id="eventList"></div>
       </div>
+    </div>
+    <div id="teamWrap" style="display:none;flex:1;overflow-y:auto;padding:22px 26px;">
+      <h2 style="font-size:18px;margin-bottom:4px;">🛡 管家团队 · A2A Agent 卡片</h2>
+      <p style="font-size:12px;color:#8A8F98;margin-bottom:18px;">协议：JSONRPC · 卡片目录 a2a_cards/*.json · 点击测试连通</p>
+      <div id="teamList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;"></div>
     </div>
     <div id="footbar"><span id="footText">今日出勤 6 人 · 等待任务…</span></div>
   </div>
@@ -453,6 +458,61 @@ const es = new EventSource("/events");
 es.onopen = () => { liveDot.className = "on"; foot("实时连接 · 今日出勤 6 人"); };
 es.onerror = () => { liveDot.className = ""; foot("连接断开，等待重连…"); };
 es.onmessage = (e) => { try { handle(JSON.parse(e.data)); } catch (_) {} };
+
+/* ============ 管家团队（A2A 卡片） ============ */
+const TEAM_FALLBACK = [
+  { name: "doc-summary-agent", description: "文档摘要管家：长文本→要点清单", version: "0.1.0",
+    _endpoint: "http://127.0.0.1:8020/rpc", _health: { online: true },
+    skills: [{ id: "doc-summarize", name: "文档摘要", tags: ["summary"] }] },
+  { name: "ppt-generation-agent", description: "演示文稿生成管家（Marvis 官方卡片镜像）", version: "0.1.0",
+    _endpoint: "https://yybadaccess.3g.qq.com/marvis-vedas-ppt/rpc", _health: { online: false, error: "需要鉴权" },
+    skills: [{ id: "ppt-generate-from-topic", name: "主题生成 PPT", tags: ["ppt"] }, { id: "ppt-generate-from-materials", name: "素材生成 PPT", tags: ["ppt"] }] },
+];
+function renderTeam(cards) {
+  const box = document.getElementById("teamList");
+  box.innerHTML = "";
+  for (const c of cards) {
+    const online = c._health && c._health.online;
+    const el = document.createElement("div");
+    el.style.cssText = "background:#fff;border:1px solid #E6E8EC;border-radius:16px;padding:16px 18px;box-shadow:0 2px 8px rgba(30,40,80,.05);";
+    el.innerHTML =
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">' +
+      '<div style="width:38px;height:38px;border-radius:12px;background:' + (online ? "#d1f4e1" : "#f1f1f1") + ';display:flex;align-items:center;justify-content:center;font-size:19px;">🤖</div>' +
+      '<div><div style="font-weight:700;font-size:14.5px;">' + c.name + '</div>' +
+      '<div style="font-size:11px;color:' + (online ? "#0a8a4e" : "#b07a00") + ';">● ' + (online ? "在线" : ("离线 " + ((c._health && c._health.error) || ""))) + ' · v' + (c.version || "?") + '</div></div></div>' +
+      '<div style="font-size:12px;color:#5b5b5b;line-height:1.6;margin-bottom:10px;">' + (c.description || "") + '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">' +
+      (c.skills || []).map((s) => '<span style="background:#eef2f8;color:#4a5a75;font-size:11px;padding:3px 9px;border-radius:20px;">' + (s.name || s.id) + '</span>').join("") +
+      '</div>' +
+      '<div style="font-size:10.5px;color:#9ca3af;font-family:Consolas,monospace;word-break:break-all;">' + (c._endpoint || (c.supportedInterfaces || [{}])[0].url || "") + '</div>';
+    box.appendChild(el);
+  }
+}
+async function loadTeam() {
+  let cards = TEAM_FALLBACK;
+  try {
+    const r = await fetch("/a2a");
+    if (r.ok) { const d = await r.json(); if (Array.isArray(d) && d.length) cards = d; }
+  } catch (_) {}
+  renderTeam(cards);
+}
+function switchView(v) {
+  const office = document.getElementById("officeWrap");
+  const team = document.getElementById("teamWrap");
+  const navTeam = document.getElementById("nav-team");
+  const sess = document.getElementById("sess-office");
+  if (v === "team") {
+    office.style.display = "none"; team.style.display = "block";
+    navTeam.classList.add("active"); sess.classList.remove("active");
+    loadTeam();
+    foot("管家团队 · A2A 卡片注册表");
+  } else {
+    team.style.display = "none"; office.style.display = "flex";
+    navTeam.classList.remove("active"); sess.classList.add("active");
+  }
+}
+document.getElementById("nav-team").addEventListener("click", () => switchView("team"));
+document.getElementById("sess-office").addEventListener("click", () => switchView("office"));
 
 initStaff();
 resize();

@@ -1,0 +1,27 @@
+{
+  "name": "ppt-generation-agent",
+  "description": "面向办公场景的演示文稿生成 Agent（镜像 Marvis 官方卡片协议）。基于主题或素材生成 PPT，流式回报逐页进度。",
+  "supportedInterfaces": [
+    { "url": "https://yybadaccess.3g.qq.com/marvis-vedas-ppt/rpc", "protocolBinding": "JSONRPC", "protocolVersion": "1.0" }
+  ],
+  "version": "0.1.0",
+  "capabilities": { "streaming": true, "pushNotifications": false },
+  "defaultInputModes": ["text/plain", "text/markdown", "application/pdf", "image/png", "image/jpeg"],
+  "defaultOutputModes": ["application/vnd.openxmlformats-officedocument.presentationml.presentation", "text/plain"],
+  "skills": [
+    {
+      "id": "ppt-generate-from-topic",
+      "name": "主题生成 PPT",
+      "description": "用户仅提供主题或一句话需求时，生成完整演示文稿",
+      "tags": ["ppt", "generation", "from-topic"],
+      "examples": ["帮我做一份介绍香港下半年演出活动的 PPT"]
+    },
+    {
+      "id": "ppt-generate-from-materials",
+      "name": "基于素材生成 PPT",
+      "description": "基于附件文档、本地文件或对话上下文素材生成 PPT",
+      "tags": ["ppt", "generation", "from-materials"],
+      "examples": ["把这份方案做成 PPT"]
+    }
+  ]
+}

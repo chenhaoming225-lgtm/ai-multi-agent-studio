@@ -55,6 +55,25 @@ class SSEHandler(BaseHTTPRequestHandler):
     def log_message(self, *a): pass  # 静默默认日志
     def do_GET(self):
         path = urlparse(self.path).path
+        if path == "/a2a":
+            # 管家团队（A2A 卡片）：返回已注册 Agent + 在线状态
+            try:
+                import sys as _s
+                _s.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "a2a"))
+                import registry as _reg
+                cards = _reg.load_cards()
+                for c in cards:
+                    c["_health"] = _reg.health(c)
+            except Exception as e:
+                cards = [{"name": "registry-error", "description": str(e), "skills": [], "_health": {"online": False}}]
+            data = json.dumps(cards, ensure_ascii=False).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(data)
+            return
         if path == "/events":
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream")
