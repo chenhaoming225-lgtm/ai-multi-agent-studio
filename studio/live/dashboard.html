@@ -67,7 +67,7 @@
     <nav>
       <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>新建对话</div>
       <div class="nav-item active"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/></svg>自动任务</div>
-      <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>技能广场</div>
+      <div class="nav-item" id="nav-skills"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>技能广场</div>
       <div class="nav-item" id="nav-team"><svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>管家团队</div>
       <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>本地资料</div>
       <div class="group-label">对话</div>
@@ -92,6 +92,11 @@
         <h3>📡 行为事件流 (behavior_events)</h3>
         <div id="eventList"></div>
       </div>
+    </div>
+    <div id="skillsWrap" style="display:none;flex:1;overflow-y:auto;padding:22px 26px;">
+      <h2 style="font-size:18px;margin-bottom:4px;">🔧 技能广场 · SKILL.md</h2>
+      <p style="font-size:12px;color:#8A8F98;margin-bottom:18px;">格式：SKILL.md（frontmatter 触发词）+ meta.json · 与 Claude Code Agent Skills 兼容</p>
+      <div id="skillsList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;"></div>
     </div>
     <div id="teamWrap" style="display:none;flex:1;overflow-y:auto;padding:22px 26px;">
       <h2 style="font-size:18px;margin-bottom:4px;">🛡 管家团队 · A2A Agent 卡片</h2>
@@ -496,22 +501,54 @@ async function loadTeam() {
   } catch (_) {}
   renderTeam(cards);
 }
-function switchView(v) {
-  const office = document.getElementById("officeWrap");
-  const team = document.getElementById("teamWrap");
-  const navTeam = document.getElementById("nav-team");
-  const sess = document.getElementById("sess-office");
-  if (v === "team") {
-    office.style.display = "none"; team.style.display = "block";
-    navTeam.classList.add("active"); sess.classList.remove("active");
-    loadTeam();
-    foot("管家团队 · A2A 卡片注册表");
-  } else {
-    team.style.display = "none"; office.style.display = "flex";
-    navTeam.classList.remove("active"); sess.classList.add("active");
+/* ============ 技能广场 ============ */
+const SKILLS_FALLBACK = [
+  { id: "stock-quick-view", name: "stock-quick-view", description: "快速股票概览：行情要点、关键位、消息面提示", meta: { display_name: "股票快速概览", icon: "📈", download_count: 128, tags: ["stock"] } },
+  { id: "doc-summarize", name: "doc-summarize", description: "文档摘要：长文本压缩成 3-5 条要点清单", meta: { display_name: "文档摘要", icon: "📄", download_count: 256, tags: ["doc"] } },
+  { id: "ppt-outline", name: "ppt-outline", description: "PPT 大纲：主题→结构化演示大纲", meta: { display_name: "PPT 大纲", icon: "📊", download_count: 89, tags: ["ppt"] } },
+];
+function renderSkills(skills) {
+  const box = document.getElementById("skillsList");
+  box.innerHTML = "";
+  for (const s of skills) {
+    const m = s.meta || {};
+    const el = document.createElement("div");
+    el.style.cssText = "background:#fff;border:1px solid #E6E8EC;border-radius:16px;padding:16px 18px;box-shadow:0 2px 8px rgba(30,40,80,.05);";
+    el.innerHTML =
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">' +
+      '<div style="width:38px;height:38px;border-radius:12px;background:#eef2f8;display:flex;align-items:center;justify-content:center;font-size:19px;">' + (m.icon || "🔧") + '</div>' +
+      '<div><div style="font-weight:700;font-size:14.5px;">' + (m.display_name || s.name || s.id) + '</div>' +
+      '<div style="font-size:11px;color:#8A8F98;">' + (s.name || s.id) + ' · ⬇ ' + (m.download_count || 0) + '</div></div></div>' +
+      '<div style="font-size:12px;color:#5b5b5b;line-height:1.6;margin-bottom:10px;min-height:36px;">' + (s.description || "") + '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;">' +
+      (m.tags || []).map((t) => '<span style="background:#d1f4e1;color:#0a8a4e;font-size:11px;padding:3px 9px;border-radius:20px;">' + t + '</span>').join("") +
+      '</div>';
+    box.appendChild(el);
   }
 }
+async function loadSkills() {
+  let skills = SKILLS_FALLBACK;
+  try {
+    const r = await fetch("/skills");
+    if (r.ok) { const d = await r.json(); if (Array.isArray(d) && d.length) skills = d; }
+  } catch (_) {}
+  renderSkills(skills);
+}
+function switchView(v) {
+  const views = { office: "officeWrap", team: "teamWrap", skills: "skillsWrap" };
+  for (const k in views) {
+    const el = document.getElementById(views[k]);
+    el.style.display = (k === v) ? (k === "office" ? "flex" : "block") : "none";
+  }
+  document.getElementById("nav-team").classList.toggle("active", v === "team");
+  document.getElementById("nav-skills").classList.toggle("active", v === "skills");
+  document.getElementById("sess-office").classList.toggle("active", v === "office");
+  if (v === "team") { loadTeam(); foot("管家团队 · A2A 卡片注册表"); }
+  else if (v === "skills") { loadSkills(); foot("技能广场 · SKILL.md 技能库"); }
+  else foot("办公室 · 行为事件驱动");
+}
 document.getElementById("nav-team").addEventListener("click", () => switchView("team"));
+document.getElementById("nav-skills").addEventListener("click", () => switchView("skills"));
 document.getElementById("sess-office").addEventListener("click", () => switchView("office"));
 
 initStaff();

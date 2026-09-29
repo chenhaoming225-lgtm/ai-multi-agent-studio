@@ -1,0 +1,12 @@
+{
+  "author": "AI-Office",
+  "display_name": "股票快速概览",
+  "display_description": "行情要点+关键位+消息面速览",
+  "detail_describe": "股票行情速览\\n关键位识别\\n消息面提示",
+  "download_count": 128,
+  "tags": [
+    "stock",
+    "finance"
+  ],
+  "icon": "📈"
+}

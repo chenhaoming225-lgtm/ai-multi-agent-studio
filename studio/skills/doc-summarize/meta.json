@@ -1,0 +1,12 @@
+{
+  "author": "AI-Office",
+  "display_name": "文档摘要",
+  "display_description": "长文本压缩成要点清单",
+  "detail_describe": "要点提炼\\n字数统计",
+  "download_count": 256,
+  "tags": [
+    "doc",
+    "summary"
+  ],
+  "icon": "📄"
+}
